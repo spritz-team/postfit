@@ -76,6 +76,7 @@ for key in ops_dict:
 
 sm_factor = 1.0 * (1.0 - sm_factor)  # r here is fixed!
 
+maxbins = max([regions[region]["nbins"] for region in regions])
 
 fit_dirs_name = list(zip(["shapes_fit_s"], ["postfit"]))
 if do_prefit:
@@ -90,7 +91,10 @@ for scale in ["lin", "log"]:
                 region_year = year_region_label(year, region)
                 for sample in samples:
                     for subsample in samples[sample]["samples_group"]:
-                        val = f[f"{directory}/{region_year}/{subsample}"].values()
+                        try:
+                            val = f[f"{directory}/{region_year}/{subsample}"].values()
+                        except:
+                            print(f"Subsample {subsample} in {region_year} missing. Skipping ... ")
 
                         if sample not in histos:
                             histos[sample] = val.copy()
@@ -140,7 +144,7 @@ for scale in ["lin", "log"]:
             hlast = 0
             hmin = 10000
 
-            edges = np.linspace(0, 25, 25 + 1)
+            edges = np.linspace(0, maxbins, maxbins + 1)
             centers = (edges[:-1] + edges[1:]) / 2
 
             fig, ax = plt.subplots(
