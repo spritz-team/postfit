@@ -8,23 +8,55 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 import uproot
-from spritz.framework.framework import cmap_pastel, get_analysis_dict
+from utils import cmap_pastel, darker_color, get_analysis_dict
+import argparse
 
 d = deepcopy(hep.style.CMS)
 
 
-def darker_color(color):
-    rgb = list(mpl.colors.to_rgba(color)[:-1])
-    darker_factor = 4 / 5
-    rgb[0] = rgb[0] * darker_factor
-    rgb[1] = rgb[1] * darker_factor
-    rgb[2] = rgb[2] * darker_factor
-    return tuple(rgb)
+parser = argparse.ArgumentParser(
+    description="Plot post-fit shapes for VBFZ EFT analysis",
+)
+
+parser.add_argument(
+    "-p",
+    "--an_path",
+    type=str,
+    help="Path to the analysis configuration file",
+)
+
+parser.add_argument(
+    "-f",
+    "--fit_path",
+    type=str,
+    help="Path to the fit_diagnostics file",
+)
+
+parser.add_argument(
+    "-ops",
+    "--ops",
+    help="Operators to plot",
+    nargs="+"
+)
+
+parser.add_argument(
+    "-prefit",
+    help="Do prefit, default false",
+    action="store_true",
+)
+
+args = parser.parse_args()
+ops = args.ops
+fitdiag_path = args.fit_path
+
+do_prefit = args.prefit
 
 
-an_dict = get_analysis_dict("../configs/vbfz-eft-2018/")
+an_dict = get_analysis_dict(f"configs/{args.an_path}")
 colors = an_dict["colors"]
 samples = an_dict["samples"]
+regions = an_dict["regions"]
+years = an_dict["years"]
 
 
 bkg_samples = []
@@ -36,25 +68,23 @@ for sample in samples:
     bkg_samples.append(sample)
 
 
-op = "cHWB"
-# f = uproot.open(f"../configs/vbfz-eft-2018/fits/fitDiagnostics.run2_{op}.root")
-# f = uproot.open(f"../configs/vbfz-eft-2018/fits/fitDiagnosticsTest_{op}.root")
-f = uproot.open("../configs/vbfz-eft-2018/fits/fitDiagnosticsTest.root")
+# op = "cHWB"
+f = uproot.open(fitdiag_path)
 
 post_fit_folder = f"plots_postfit_combined_{op}"
 os.makedirs(post_fit_folder, exist_ok=True)
 
 
+fit_dirs_name = zip(["shapes_fit_s"], ["postfit"])
+if do_prefit:
+    fit_dirs_name = zip(["shapes_prefit", "shapes_fit_s"], ["prefit", "postfit"])
+
 for scale in ["lin", "log"]:
-    for directory, name in zip(
-        ["shapes_prefit", "shapes_fit_s"], ["prefit", "postfit"]
-    ):
-        for region in [
-            f"vbfz_{reg}_{cat}" for reg in ["sr", "top"] for cat in ["mm", "ee"]
-        ]:
+    for directory, name in fit_dirs_name:
+        for region in regions:
             histos = {}
 
-            for year in ["2016pre", "2016post", "2017", "2018"]:
+            for year in years:
                 region_year = f"{region}_{year}"
                 print(region_year)
                 # for key in samples:
@@ -190,9 +220,7 @@ for scale in ["lin", "log"]:
                 zorder=len(samples) + 1,
             )
 
-            nbins = 25
-            if "top" in region:
-                nbins = 1
+            nbins = regions[region]["nbins"]
 
             ax[0].set_xlim(0, nbins)
             if scale == "log":
@@ -239,17 +267,16 @@ for scale in ["lin", "log"]:
             data_err = (ys[1, :] + ys[2, :]) / 2
             data_err = np.min((ys[1, :], ys[2, :]), axis=0)
 
-            _mask = np.array([False] * nbins + [True] * (25 - nbins))
+            # need to mask only on meaningful bins for this region
+            _mask = np.array([False] * nbins + [True] * (len(vals) - nbins))
             exp = np.exp(-np.square(ys[0, :] - vals) / (2 * data_err**2))[~_mask]
             chi2 = -2 * np.log(np.prod(exp))
 
             if name == "postfit":
                 ax[1].set_ylim(0.90, 1.1)
                 ax[1].legend(
-                    # title="$\\chi^2_0$ / ndof = {:.2f}".format(chi2),
                     title="$\\chi^2$ = {:.2f}".format(chi2),
                     loc="upper center",
-                    # loc=(0.016, 0.75),
                     frameon=True,
                     ncols=3,
                     framealpha=0.8,

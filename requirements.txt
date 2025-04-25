@@ -1,0 +1,4 @@
+matplotlib
+uproot
+mplhep
+numpy
