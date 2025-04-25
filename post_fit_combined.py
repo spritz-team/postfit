@@ -32,12 +32,7 @@ parser.add_argument(
     help="Path to the fit_diagnostics file",
 )
 
-parser.add_argument(
-    "-ops",
-    "--ops",
-    help="Operators to plot",
-    nargs="+"
-)
+parser.add_argument("-ops", "--ops", help="Operators to plot", nargs="+")
 
 parser.add_argument(
     "-prefit",
@@ -52,32 +47,39 @@ fitdiag_path = args.fit_path
 do_prefit = args.prefit
 
 
-an_dict = get_analysis_dict(f"configs/{args.an_path}")
-colors = an_dict["colors"]
+an_dict = get_analysis_dict(f"{args.an_path}")
 samples = an_dict["samples"]
 regions = an_dict["regions"]
 years = an_dict["years"]
+year_region_label = an_dict["year_region_label"]
 
 
-bkg_samples = []
-for sample in samples:
-    if samples[sample].get("is_signal", False):
-        continue
-    if "data" in sample.lower():
-        continue
-    bkg_samples.append(sample)
-
-
-# op = "cHWB"
 f = uproot.open(fitdiag_path)
 
-post_fit_folder = f"plots_postfit_combined_{op}"
+post_fit_folder = f"plots/plots_postfit_combined_{'_'.join(ops)}"
 os.makedirs(post_fit_folder, exist_ok=True)
 
 
-fit_dirs_name = zip(["shapes_fit_s"], ["postfit"])
+# get wilson coeffs from tree_fit_sb, which is a TTree
+tree_fit_sb = f["tree_fit_sb"]
+
+ops_dict = {}
+for op in ops:
+    op_val = tree_fit_sb[f"k_{op}"].array(library="np")[0]
+    ops_dict[op] = op_val
+print(ops_dict)
+
+
+sm_factor = 0.0
+for key in ops_dict:
+    sm_factor += ops_dict[key]
+
+sm_factor = 1.0 * (1.0 - sm_factor)  # r here is fixed!
+
+
+fit_dirs_name = list(zip(["shapes_fit_s"], ["postfit"]))
 if do_prefit:
-    fit_dirs_name = zip(["shapes_prefit", "shapes_fit_s"], ["prefit", "postfit"])
+    fit_dirs_name = list(zip(["shapes_prefit", "shapes_fit_s"], ["prefit", "postfit"]))
 
 for scale in ["lin", "log"]:
     for directory, name in fit_dirs_name:
@@ -85,16 +87,15 @@ for scale in ["lin", "log"]:
             histos = {}
 
             for year in years:
-                region_year = f"{region}_{year}"
-                print(region_year)
-                # for key in samples:
-                for sample in bkg_samples:
-                    val = f[f"{directory}/{region_year}/{sample}"].values()
+                region_year = year_region_label(year, region)
+                for sample in samples:
+                    for subsample in samples[sample]["samples_group"]:
+                        val = f[f"{directory}/{region_year}/{subsample}"].values()
 
-                    if sample not in histos:
-                        histos[sample] = val.copy()
-                    else:
-                        histos[sample] += val
+                        if sample not in histos:
+                            histos[sample] = val.copy()
+                        else:
+                            histos[sample] += val
 
                 sig_val = f[f"{directory}/{region_year}/total_signal"].values()
                 if "sig" not in histos:
@@ -123,6 +124,15 @@ for scale in ["lin", "log"]:
                     histos["data"] += data_val
                     histos["data_err"] += data_err
 
+            sm_signals = []
+            for sample in samples:
+                if not samples[sample].get("is_signal", False):
+                    continue
+                histos[sample] = histos[sample] * sm_factor
+                sm_signals.append(histos[sample])
+
+            histos["sig"] = histos["sig"] - np.sum(sm_signals, axis=0)
+
             for key in histos:
                 if "err" in key:
                     histos[key] = np.sqrt(histos[key])
@@ -146,7 +156,7 @@ for scale in ["lin", "log"]:
                 region, data=True, lumi=round(138, 2), ax=ax[0], year="Full Run II"
             )  # ,fontsize=16)
 
-            for i, sample in enumerate(bkg_samples):
+            for i, sample in enumerate(list(samples.keys())):
                 vals = histos[sample]
 
                 if isinstance(hlast, int):
@@ -156,7 +166,7 @@ for scale in ["lin", "log"]:
 
                 hmin = min(hmin, np.min(vals))
                 integral = round(float(np.sum(vals)), 2)
-                color = colors[sample]
+                color = samples[sample]["color"]
 
                 ax[0].stairs(
                     hlast,
@@ -171,7 +181,7 @@ for scale in ["lin", "log"]:
 
             vals_sig = histos["sig"]
 
-            color = cmap_pastel[0]
+            color = cmap_pastel[1]
 
             ax[0].stairs(
                 hlast + vals_sig,
@@ -179,18 +189,29 @@ for scale in ["lin", "log"]:
                 linewidth=1,
                 color=color,
                 fill=True,
-                zorder=-len(samples),
+                zorder=-len(list(samples.keys())),
                 edgecolor=darker_color(color),
             )
 
-            integral = round(float(np.sum(vals)), 2)
+            eft_zorder = len(samples) + 1
+            # superimposed from hlast
+            ax[0].stairs(
+                hlast + vals_sig,
+                edges,
+                zorder=eft_zorder,
+                linewidth=2,
+                color=color,
+            )
+
+            # superimposed from 0
+            integral = round(float(np.sum(vals_sig)), 2)
             ax[0].stairs(
                 vals_sig,
                 edges,
-                zorder=50,
+                zorder=eft_zorder,
                 linewidth=2,
                 color=color,
-                label=f"SM + EFT [{integral}]",
+                label=f"EFT [{integral}]",
             )
 
             vals = histos["total"]
@@ -217,12 +238,13 @@ for scale in ["lin", "log"]:
                 fmt="ko",
                 markersize=4,
                 label="Data" + f" [{integral}]",
-                zorder=len(samples) + 1,
+                zorder=len(samples) + 3,
             )
 
             nbins = regions[region]["nbins"]
 
             ax[0].set_xlim(0, nbins)
+
             if scale == "log":
                 ax[0].set_ylim(
                     max(0.5, hmin), np.max(hlast) * 5e3

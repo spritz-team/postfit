@@ -4,9 +4,8 @@ import sys
 mpl.use("Agg")
 
 
-def darker_color(color):
+def darker_color(color, darker_factor=4 / 5):
     rgb = list(mpl.colors.to_rgba(color)[:-1])
-    darker_factor = 4 / 5
     rgb[0] = rgb[0] * darker_factor
     rgb[1] = rgb[1] * darker_factor
     rgb[2] = rgb[2] * darker_factor
@@ -36,10 +35,7 @@ cmap_pastel = [
 
 
 def get_analysis_dict(path):
-    filename = path.split("/")[-1]
-    filename = ".".join(filename.split(".")[:-1])
-    config_folder = "/".join(path.split("/")[:-1])
-    sys.path.insert(0, config_folder)
-    exec(f"import {filename} as analysis_cfg", globals(), globals())
+    sys.path.insert(0, 'configs')
+    exec(f"import {path} as analysis_cfg", globals(), globals())
 
     return analysis_cfg.__dict__  # type: ignore # noqa: F821
