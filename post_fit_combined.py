@@ -156,8 +156,9 @@ for scale in ["lin", "log"]:
                 figsize=(6, 6),
             )  # figsize=(5,5), dpi=200)
             fig.tight_layout(pad=-0.5)
+            region_label = regions[region].get("label", region)
             hep.cms.label(
-                region, data=True, lumi=round(138, 2), ax=ax[0], year="Full Run II"
+                region_label, data=True, lumi=round(138, 2), ax=ax[0], year="Full Run II"
             )  # ,fontsize=16)
 
             for i, sample in enumerate(list(samples.keys())):
@@ -168,14 +169,18 @@ for scale in ["lin", "log"]:
                 else:
                     hlast += vals.copy()
 
-                hmin = min(hmin, np.min(vals))
+                # hmin = min(hmin, np.min(vals))
+                hmin = min(hmin, np.min(hlast))
+                print(sample, hmin)
+
                 integral = round(float(np.sum(vals)), 2)
                 color = samples[sample]["color"]
 
+                sample_label = samples[sample].get("label", sample)
                 ax[0].stairs(
                     hlast,
                     edges,
-                    label=sample + f" [{integral}]",
+                    label=sample_label + f" [{integral}]",
                     fill=True,
                     zorder=-i,
                     linewidth=1.0,
@@ -308,6 +313,21 @@ for scale in ["lin", "log"]:
                     framealpha=0.8,
                     fontsize=8,
                 )
+            
+            # variable label
+            variable_label = regions[region].get("var_label", region)
+            ax[1].set_xlabel(variable_label, fontsize=10, loc="right")
+
+            if 'var_bins' in regions[region]:
+                var_bins = regions[region]["var_bins"]
+                ax[1].set_xticks(np.linspace(0, len(var_bins)-1, len(var_bins)))
+                ax[1].set_xticklabels(var_bins, rotation=0, ha="center", fontsize=8)
+
+            if 'var_splits' in regions[region]:
+                var_splits = regions[region]["var_splits"]
+                for split in var_splits:
+                    ax[0].axvline(split, color="gray", linestyle="--", linewidth=0.5)
+                    ax[1].axvline(split, color="gray", linestyle="--", linewidth=0.5)
 
             plt.savefig(
                 f"{post_fit_folder}/{scale}_{name}_{region}.png",

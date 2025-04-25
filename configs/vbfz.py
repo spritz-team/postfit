@@ -11,15 +11,32 @@ for i, year in enumerate(["2016pre", "2016post", "2017", "2018"]):
 
 regions = {}
 
+
+var_bins = ["$\\pi$", 2.29, 1.58, 0.96, 0.38] * 5 + [0.0]
+var_bins = [round(f, 1) if not isinstance(f, str) else f for f in var_bins]
+
 for cat in ["ee", "mm"]:
+    regions[f"top_{cat}"] = {
+        "nbins": 1,
+        "label": f"Top {cat}",
+        "var_bins": [0, 1],
+        "var_label": "Events",
+    }
+
     regions[f"dypu_{cat}"] = {
         "nbins": 25,
-        "label": "$\\Delta\\phi _{jj}$ : DNN",
+        "label": f"DY PU {cat}",
+        "var_bins": var_bins,
+        "var_label": "$\\Delta\\phi _{jj}$ : DNN",
+        "var_splits": [5, 10, 15, 20],
     }
 
     regions[f"sr_{cat}"] = {
         "nbins": 25,
-        "label": "$\\Delta\\phi _{jj}$ : DNN",
+        "label": f"SR {cat}",
+        "var_bins": var_bins,
+        "var_label": "$\\Delta\\phi _{jj}$ : DNN",
+        "var_splits": [5, 10, 15, 20],
     }
 
 
@@ -29,16 +46,35 @@ def year_region_label(year, region):
 
 samples = {}
 
+samples["Int"] = {
+    "samples_group": ["Int"],
+    "color": cmap_petroff[4],
+    "label": "Int",
+}
 
-# for j in range(5):
-#     base_color = cmap_petroff[3]
-#     factor = 1.0 / 1 - ((j + 1) / 5) / 2
 
-#     samples[f"DY_hard_{j}"] = {
-#         "samples_group": [f"DY_hard_{j}"],
-#         "color": darker_color(base_color, factor),
-#         "label": f"DY hard {j}",
-#     }
+samples["VV"] = {
+    "samples_group": ["VV"],
+    "color": cmap_petroff[2],
+    "label": "VV",
+}
+
+samples["Top"] = {
+    "samples_group": ["Top"],
+    "color": cmap_petroff[1],
+    "label": "Top",
+}
+
+for key, i_color in zip(["PU", "hard"], [3, 0]):
+    for j in range(5):
+        base_color = cmap_petroff[i_color]
+        factor = 1.0 / 1 - ((j + 1) / 5) / 2
+
+        samples[f"DY_{key}_{j}"] = {
+            "samples_group": [f"DY_{key}_{j}"],
+            "color": darker_color(base_color, factor),
+            "label": f"DY {key} {j}",
+        }
 
 #     base_color = cmap_petroff[0]
 #     samples[f"DY_PU_{j}"] = {
@@ -47,19 +83,19 @@ samples = {}
 #         "label": f"DY PU {j}",
 #     }
 
-base_color = cmap_petroff[0]
-samples["DY_PU"] = {
-    "samples_group": [f"DY_PU_{j}" for j in range(5)],
-    "color": base_color,
-    "label": "DY PU",
-}
+# base_color = cmap_petroff[0]
+# samples["DY_PU"] = {
+#     "samples_group": [f"DY_PU_{j}" for j in range(5)],
+#     "color": base_color,
+#     "label": "DY PU",
+# }
 
-base_color = cmap_petroff[3]
-samples["DY_hard"] = {
-    "samples_group": [f"DY_hard_{j}" for j in range(5)],
-    "color": base_color,
-    "label": "DY hard",
-}
+# base_color = cmap_petroff[3]
+# samples["DY_hard"] = {
+#     "samples_group": [f"DY_hard_{j}" for j in range(5)],
+#     "color": base_color,
+#     "label": "DY hard",
+# }
 
 samples["Zjj"] = {
     "samples_group": ["sm"],
