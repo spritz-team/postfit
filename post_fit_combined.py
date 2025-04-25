@@ -11,6 +11,7 @@ import uproot
 from utils import cmap_pastel, darker_color, get_analysis_dict
 import argparse
 
+np.seterr(divide="ignore", invalid="ignore")
 d = deepcopy(hep.style.CMS)
 
 
@@ -32,11 +33,22 @@ parser.add_argument(
     help="Path to the fit_diagnostics file",
 )
 
-parser.add_argument("-ops", "--ops", help="Operators to plot", nargs="+")
+parser.add_argument(
+    "-ops",
+    "--ops",
+    help="Operators to plot",
+    nargs="+",
+)
 
 parser.add_argument(
     "-prefit",
     help="Do prefit, default false",
+    action="store_true",
+)
+
+parser.add_argument(
+    "--skip-lin",
+    help="Skip lin, default false",
     action="store_true",
 )
 
@@ -45,6 +57,9 @@ ops = args.ops
 fitdiag_path = args.fit_path
 
 do_prefit = args.prefit
+
+if args.skip_lin:
+    do_lin = False
 
 
 an_dict = get_analysis_dict(f"{args.an_path}")
@@ -67,7 +82,6 @@ ops_dict = {}
 for op in ops:
     op_val = tree_fit_sb[f"k_{op}"].array(library="np")[0]
     ops_dict[op] = op_val
-print(ops_dict)
 
 
 sm_factor = 0.0
@@ -82,7 +96,11 @@ fit_dirs_name = list(zip(["shapes_fit_s"], ["postfit"]))
 if do_prefit:
     fit_dirs_name = list(zip(["shapes_prefit", "shapes_fit_s"], ["prefit", "postfit"]))
 
-for scale in ["lin", "log"]:
+scales = ["log"]
+if do_lin:
+    scales = ["lin", "log"]
+
+for scale in scales:
     for directory, name in fit_dirs_name:
         for region in regions:
             histos = {}
@@ -93,8 +111,10 @@ for scale in ["lin", "log"]:
                     for subsample in samples[sample]["samples_group"]:
                         try:
                             val = f[f"{directory}/{region_year}/{subsample}"].values()
-                        except:
-                            print(f"Subsample {subsample} in {region_year} missing. Skipping ... ")
+                        except Exception as _:
+                            print(
+                                f"Subsample {subsample} in {region_year} missing. Skipping ... "
+                            )
 
                         if sample not in histos:
                             histos[sample] = val.copy()
@@ -158,7 +178,11 @@ for scale in ["lin", "log"]:
             fig.tight_layout(pad=-0.5)
             region_label = regions[region].get("label", region)
             hep.cms.label(
-                region_label, data=True, lumi=round(138, 2), ax=ax[0], year="Full Run II"
+                region_label,
+                data=True,
+                lumi=round(138, 2),
+                ax=ax[0],
+                year="Full Run II",
             )  # ,fontsize=16)
 
             for i, sample in enumerate(list(samples.keys())):
@@ -171,7 +195,6 @@ for scale in ["lin", "log"]:
 
                 # hmin = min(hmin, np.min(vals))
                 hmin = min(hmin, np.min(hlast))
-                print(sample, hmin)
 
                 integral = round(float(np.sum(vals)), 2)
                 color = samples[sample]["color"]
@@ -219,6 +242,7 @@ for scale in ["lin", "log"]:
                 edges,
                 zorder=eft_zorder,
                 linewidth=2,
+                linestyle="dashed",
                 color=color,
                 label=f"EFT [{integral}]",
             )
@@ -306,6 +330,7 @@ for scale in ["lin", "log"]:
             if name == "postfit":
                 ax[1].set_ylim(0.90, 1.1)
                 ax[1].legend(
+                    [],
                     title="$\\chi^2$ = {:.2f}".format(chi2),
                     loc="upper center",
                     frameon=True,
@@ -313,17 +338,20 @@ for scale in ["lin", "log"]:
                     framealpha=0.8,
                     fontsize=8,
                 )
-            
+
+            ax[0].set_ylabel("Events", fontsize=12, loc="top")
+            ax[1].set_ylabel("Data / Pred.", fontsize=10, loc="center")
+
             # variable label
             variable_label = regions[region].get("var_label", region)
             ax[1].set_xlabel(variable_label, fontsize=10, loc="right")
 
-            if 'var_bins' in regions[region]:
+            if "var_bins" in regions[region]:
                 var_bins = regions[region]["var_bins"]
-                ax[1].set_xticks(np.linspace(0, len(var_bins)-1, len(var_bins)))
+                ax[1].set_xticks(np.linspace(0, len(var_bins) - 1, len(var_bins)))
                 ax[1].set_xticklabels(var_bins, rotation=0, ha="center", fontsize=8)
 
-            if 'var_splits' in regions[region]:
+            if "var_splits" in regions[region]:
                 var_splits = regions[region]["var_splits"]
                 for split in var_splits:
                     ax[0].axvline(split, color="gray", linestyle="--", linewidth=0.5)
