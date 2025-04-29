@@ -433,8 +433,9 @@ for scale in scales:
             if "var_splits" in regions[region]:
                 var_splits = regions[region]["var_splits"]
                 for split in var_splits:
-                    ax[0].axvline(split, color="gray", linestyle="--", linewidth=0.5)
-                    ax[1].axvline(split, color="gray", linestyle="--", linewidth=0.5)
+                    for i in range(len(ax)):
+                        ax[i].axvline(split, color="gray", linestyle="--", linewidth=0.5)
+                    # ax[1].axvline(split, color="gray", linestyle="--", linewidth=0.5)
 
             plt.savefig(
                 f"{post_fit_folder}/{scale}_{name}_{region}.png",
