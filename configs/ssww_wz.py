@@ -13,17 +13,23 @@ regions = {}
 
 regions["ssww"] = {
     "nbins": 12,
-    "label": r"$m_{ll} : m_{jj}$",
+    "label": "SSWW SR",
+    "var_label": r"$m_{ll} : m_{jj}$",
+    "var_splits": [3,6,9],
 }
 
 regions["wz"] = {
     "nbins": 6,
-    "label": r"$m_{jj} : mT_{WZ}$",
+    "label": "WZ SR",
+    "var_label": r"$m_{jj} : mT_{WZ}$",
+    "var_splits": [2,4],
 }
 
 regions["wzb"] = {
     "nbins": 4,
-    "label": r"$m_{jj}$",
+    "label":"WZb CR",
+    "var_bins": [500,800,1200,1800,3000],
+    "var_label": r"$m_{jj} [GeV]$",
 }
 
 
@@ -33,12 +39,6 @@ def year_region_label(year, region):
 
 samples = {}
 
-samples["ww_sm"] = {
-    "samples_group": ["ww_sm", "wz_sm"],
-    "color": "burlywood",
-    "is_signal": True,
-    "label": "ww + wz sm",
-}
 
 #samples["wz_sm"] = {
 #    "samples_group": ["wz_sm"],
@@ -96,5 +96,11 @@ samples["Fake_lep"] = {
     "label": "non-prompt",
 }
 
+samples["ww_sm"] = {
+    "samples_group": ["ww_sm", "wz_sm"],
+    "color": "burlywood",
+    "is_signal": True,
+    "label": "ww + wz sm",
+}
 
 
