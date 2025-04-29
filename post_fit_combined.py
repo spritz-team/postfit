@@ -423,7 +423,7 @@ for scale in scales:
 
             # variable label
             variable_label = regions[region].get("var_label", region)
-            ax[1].set_xlabel(variable_label, fontsize=10, loc="right")
+            ax[-1].set_xlabel(variable_label, fontsize=10, loc="right")
 
             if "var_bins" in regions[region]:
                 var_bins = regions[region]["var_bins"]
