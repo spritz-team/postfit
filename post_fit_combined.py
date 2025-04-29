@@ -58,6 +58,7 @@ fitdiag_path = args.fit_path
 
 do_prefit = args.prefit
 
+do_lin = True
 if args.skip_lin:
     do_lin = False
 
@@ -229,6 +230,7 @@ for scale in scales:
             )
 
             eft_zorder = len(histos) + 1
+
             # superimposed from hlast
             ax[0].stairs(
                 hlast + vals_sig,
@@ -236,6 +238,7 @@ for scale in scales:
                 zorder=eft_zorder,
                 linewidth=2,
                 color=color,
+                label=f"EFT [{integral}]",
             )
 
             # superimposed from 0
@@ -247,21 +250,34 @@ for scale in scales:
                 linewidth=2,
                 linestyle="dashed",
                 color=color,
-                label=f"EFT [{integral}]",
             )
 
             vals = histos["total"]
+            errs = histos["total_err"]
             color = "gray"
             integral = round(float(np.sum(vals)), 2)
 
+            # its already present
             ax[0].stairs(
                 vals,
                 edges,
-                zorder=-len(histos) - 1,
+                zorder=+len(histos) + 1,
                 linewidth=0,
                 color=color,
-                alpha=0.0,
+                alpha=0,
                 label=f"Total MC [{integral}]",
+            )
+
+            # its already present
+            ax[0].stairs(
+                vals + errs,
+                edges,
+                baseline=vals - errs,
+                zorder=+len(histos) + 1,
+                hatch="///",
+                linewidth=0,
+                color=color,
+                # label=f"Total MC [{integral}]",
             )
 
             x = centers
