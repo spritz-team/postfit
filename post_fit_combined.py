@@ -285,7 +285,7 @@ for scale in scales:
                 linewidth=0,
                 color=color,
                 alpha=0,
-                label=f"Total MC [{integral}]",
+                label=f"MC    [{integral}]",
             )
 
             # its already present
@@ -381,13 +381,13 @@ for scale in scales:
             if ratio_option == 1:
                 # ax 2, data - bkg - sm  to compare EFT
                 vals_bkg = vals - vals_sig
-
-                ax[2].errorbar(
-                    x,
-                    (ys[0, :] - vals_bkg),
-                    yerr=[ys[1, :], ys[2, :]],
-                    fmt="ko",
-                    markersize=4,
+                ax[2].stairs(
+                    errs,
+                    edges,
+                    baseline=-errs,
+                    color="lightgray",
+                    # zorder=9,
+                    fill=True,
                 )
 
                 ax[2].stairs(
@@ -397,13 +397,35 @@ for scale in scales:
                     linestyle="dashed",
                     label="SM",
                 )
+
                 ax[2].stairs(vals_sig, edges, color="red", label="EFT")
-                ax[2].legend()
+                ax[2].errorbar(
+                    x,
+                    (ys[0, :] - vals_bkg),
+                    yerr=[ys[1, :], ys[2, :]],
+                    fmt="ko",
+                    markersize=4,
+                )
+
+                ax[2].legend(
+                    ncols=2,
+                    loc="upper center",
+                )
                 ax[2].set_ylabel("Data - SM", fontsize=10, loc="center")
             elif ratio_option == 2:
                 # ax 2, data - bkg - sm  to compare EFT
                 vals_sm = np.sum(sm_signals, axis=0)
                 vals_bkg = vals - vals_sig - vals_sm
+
+                #FIXME it's wrong I think, it should be around SM and SM+EFT
+                ax[2].stairs(
+                    errs,
+                    edges,
+                    baseline=-errs,
+                    color="lightgray",
+                    # zorder=9,
+                    fill=True,
+                )
 
                 ax[2].errorbar(
                     x,
@@ -427,15 +449,16 @@ for scale in scales:
 
             if "var_bins" in regions[region]:
                 var_bins = regions[region]["var_bins"]
-                ax[1].set_xticks(np.linspace(0, len(var_bins) - 1, len(var_bins)))
-                ax[1].set_xticklabels(var_bins, rotation=0, ha="center", fontsize=8)
+                ax[-1].set_xticks(np.linspace(0, len(var_bins) - 1, len(var_bins)))
+                ax[-1].set_xticklabels(var_bins, rotation=0, ha="center", fontsize=8)
 
             if "var_splits" in regions[region]:
                 var_splits = regions[region]["var_splits"]
                 for split in var_splits:
                     for i in range(len(ax)):
-                        ax[i].axvline(split, color="gray", linestyle="--", linewidth=0.5)
-                    # ax[1].axvline(split, color="gray", linestyle="--", linewidth=0.5)
+                        ax[i].axvline(
+                            split, color="gray", linestyle="--", linewidth=0.5
+                        )
 
             plt.savefig(
                 f"{post_fit_folder}/{scale}_{name}_{region}.png",
