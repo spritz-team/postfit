@@ -52,6 +52,14 @@ parser.add_argument(
     action="store_true",
 )
 
+parser.add_argument(
+    "--ratio-option",
+    type=int,
+    choices=[0, 1, 2],
+    default=0,
+    help="0: no data-bkg, 1: data-SM, 2: data-bkg",
+)
+
 args = parser.parse_args()
 ops = args.ops
 fitdiag_path = args.fit_path
@@ -62,6 +70,7 @@ do_lin = True
 if args.skip_lin:
     do_lin = False
 
+ratio_option = args.ratio_option
 
 an_dict = get_analysis_dict(f"{args.an_path}")
 samples = an_dict["samples"]
@@ -169,14 +178,25 @@ for scale in scales:
             edges = np.linspace(0, maxbins, maxbins + 1)
             centers = (edges[:-1] + edges[1:]) / 2
 
-            fig, ax = plt.subplots(
-                2,
-                1,
-                sharex=True,
-                gridspec_kw={"height_ratios": [3, 1]},
-                dpi=200,
-                figsize=(6, 6),
-            )  # figsize=(5,5), dpi=200)
+            if ratio_option not in [1, 2]:
+                fig, ax = plt.subplots(
+                    2,
+                    1,
+                    sharex=True,
+                    gridspec_kw={"height_ratios": [3, 1]},
+                    dpi=200,
+                    figsize=(6, 6),
+                )  # figsize=(5,5), dpi=200)
+            else:
+                fig, ax = plt.subplots(
+                    3,
+                    1,
+                    sharex=True,
+                    gridspec_kw={"height_ratios": [3, 1, 1]},
+                    dpi=200,
+                    figsize=(6, 6),
+                )  # figsize=(5,5), dpi=200)
+
             fig.tight_layout(pad=-0.5)
             region_label = regions[region].get("label", region)
             hep.cms.label(
@@ -243,7 +263,6 @@ for scale in scales:
             )
 
             # superimposed from 0
-            integral = round(float(np.sum(vals_sig)), 2)
             ax[0].stairs(
                 vals_sig,
                 edges,
@@ -358,6 +377,46 @@ for scale in scales:
                     framealpha=0.8,
                     fontsize=8,
                 )
+
+            if ratio_option == 1:
+                # ax 2, data - bkg - sm  to compare EFT
+                vals_bkg = vals - vals_sig
+
+                ax[2].errorbar(
+                    x,
+                    (ys[0, :] - vals_bkg),
+                    yerr=[ys[1, :], ys[2, :]],
+                    fmt="ko",
+                    markersize=4,
+                )
+
+                ax[2].stairs(
+                    np.zeros_like(vals_sig),
+                    edges,
+                    color="green",
+                    linestyle="dashed",
+                    label="SM",
+                )
+                ax[2].stairs(vals_sig, edges, color="red", label="EFT")
+                ax[2].legend()
+                ax[2].set_ylabel("Data - SM", fontsize=10, loc="center")
+            elif ratio_option == 2:
+                # ax 2, data - bkg - sm  to compare EFT
+                vals_sm = np.sum(sm_signals, axis=0)
+                vals_bkg = vals - vals_sig - vals_sm
+
+                ax[2].errorbar(
+                    x,
+                    (ys[0, :] - vals_bkg),
+                    yerr=[ys[1, :], ys[2, :]],
+                    fmt="ko",
+                    markersize=4,
+                )
+
+                ax[2].stairs(vals_sm, edges, color="green", label="SM")
+                ax[2].stairs(vals_sm + vals_sig, edges, color="red", label="SM + EFT")
+                ax[2].legend()
+                ax[2].set_ylabel("Data - Bkg", fontsize=10, loc="center")
 
             ax[0].set_ylabel("Events", fontsize=12, loc="top")
             ax[1].set_ylabel("Data / Pred.", fontsize=10, loc="center")
