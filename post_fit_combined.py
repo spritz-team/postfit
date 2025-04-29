@@ -216,6 +216,7 @@ for scale in scales:
                 )
 
             vals_sig = histos["sig"]
+            integral = round(float(np.sum(vals_sig)), 2)
 
             color = cmap_pastel[1]
 
