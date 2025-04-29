@@ -115,6 +115,7 @@ for scale in scales:
                             print(
                                 f"Subsample {subsample} in {region_year} missing. Skipping ... "
                             )
+                            continue
 
                         if sample not in histos:
                             histos[sample] = val.copy()
@@ -152,7 +153,7 @@ for scale in scales:
             for sample in samples:
                 if not samples[sample].get("is_signal", False):
                     continue
-                histos[sample] = histos[sample] * sm_factor
+                histos[sample] = histos[sample] / sm_factor
                 sm_signals.append(histos[sample])
 
             histos["sig"] = histos["sig"] - np.sum(sm_signals, axis=0)
@@ -186,6 +187,8 @@ for scale in scales:
             )  # ,fontsize=16)
 
             for i, sample in enumerate(list(samples.keys())):
+                if sample not in histos:
+                    continue
                 vals = histos[sample]
 
                 if isinstance(hlast, int):
@@ -221,11 +224,11 @@ for scale in scales:
                 linewidth=1,
                 color=color,
                 fill=True,
-                zorder=-len(list(samples.keys())),
+                zorder=-len(list(histos.keys())),
                 edgecolor=darker_color(color),
             )
 
-            eft_zorder = len(samples) + 1
+            eft_zorder = len(histos) + 1
             # superimposed from hlast
             ax[0].stairs(
                 hlast + vals_sig,
@@ -254,7 +257,7 @@ for scale in scales:
             ax[0].stairs(
                 vals,
                 edges,
-                zorder=-len(samples) - 1,
+                zorder=-len(histos) - 1,
                 linewidth=0,
                 color=color,
                 alpha=0.0,
@@ -271,7 +274,7 @@ for scale in scales:
                 fmt="ko",
                 markersize=4,
                 label="Data" + f" [{integral}]",
-                zorder=len(samples) + 3,
+                zorder=len(histos) + 3,
             )
 
             nbins = regions[region]["nbins"]

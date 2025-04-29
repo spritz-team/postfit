@@ -9,11 +9,13 @@ for i, year in enumerate(["2016pre", "2016post", "2017", "2018"]):
         "lumi": lumis[i],
     }
 
-regions = {}
 
 
 var_bins = ["$\\pi$", 2.29, 1.58, 0.96, 0.38] * 5 + [0.0]
 var_bins = [round(f, 1) if not isinstance(f, str) else f for f in var_bins]
+
+# Define regions
+regions = {}
 
 for cat in ["ee", "mm"]:
     regions[f"top_{cat}"] = {
@@ -40,10 +42,12 @@ for cat in ["ee", "mm"]:
     }
 
 
+# This function is exported to fetch the datacard folder in fitDiag.
 def year_region_label(year, region):
     return f"vbfz_{region}_{year}"
 
 
+# Define sample
 samples = {}
 
 samples["Int"] = {
@@ -75,27 +79,6 @@ for key, i_color in zip(["PU", "hard"], [3, 0]):
             "color": darker_color(base_color, factor),
             "label": f"DY {key} {j}",
         }
-
-#     base_color = cmap_petroff[0]
-#     samples[f"DY_PU_{j}"] = {
-#         "samples_group": [f"DY_PU_{j}"],
-#         "color": darker_color(base_color, factor),
-#         "label": f"DY PU {j}",
-#     }
-
-# base_color = cmap_petroff[0]
-# samples["DY_PU"] = {
-#     "samples_group": [f"DY_PU_{j}" for j in range(5)],
-#     "color": base_color,
-#     "label": "DY PU",
-# }
-
-# base_color = cmap_petroff[3]
-# samples["DY_hard"] = {
-#     "samples_group": [f"DY_hard_{j}" for j in range(5)],
-#     "color": base_color,
-#     "label": "DY hard",
-# }
 
 samples["Zjj"] = {
     "samples_group": ["sm"],
