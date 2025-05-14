@@ -47,6 +47,18 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-bkg",
+    help="Plot bkg only fit results",
+    action="store_true",
+)
+
+parser.add_argument(
+    "-sm",
+    help="If this is not an EFT fit (text2workspace normal)",
+    action="store_true",
+)
+
+parser.add_argument(
     "--skip-lin",
     help="Skip lin, default false",
     action="store_true",
@@ -58,6 +70,13 @@ parser.add_argument(
     choices=[0, 1, 2],
     default=0,
     help="0: no data-bkg, 1: data-SM, 2: data-bkg",
+)
+
+parser.add_argument(
+    "--ratio-lim",
+    type=float,
+    default=1.2,
+    help="Upper limit on ratio plot, default 1.2",
 )
 
 args = parser.parse_args()
@@ -86,11 +105,17 @@ os.makedirs(post_fit_folder, exist_ok=True)
 
 
 # get wilson coeffs from tree_fit_sb, which is a TTree
-tree_fit_sb = f["tree_fit_sb"]
+tree__ = "tree_fit_sb"
+sh__ = "shapes_fit_s"
+if args.bkg:
+    tree__ = "tree_fit_b"
+    sh__ = "shapes_fit_b"
+
+tree_fit_sb = f[tree__]
 
 ops_dict = {}
 for op in ops:
-    op_val = tree_fit_sb[f"k_{op}"].array(library="np")[0]
+    op_val = tree_fit_sb[f"{op}"].array(library="np")[0]
     ops_dict[op] = op_val
 
 
@@ -98,13 +123,17 @@ sm_factor = 0.0
 for key in ops_dict:
     sm_factor += ops_dict[key]
 
-sm_factor = 1.0 * (1.0 - sm_factor)  # r here is fixed!
+if not args.sm:
+   sm_factor = 1.0 * (1.0 - sm_factor)  # r here is fixed!
+
+print(f"----> sm factor {sm_factor}")
 
 maxbins = max([regions[region]["nbins"] for region in regions])
 
-fit_dirs_name = list(zip(["shapes_fit_s"], ["postfit"]))
+
+fit_dirs_name = list(zip([sh__], ["postfit"]))
 if do_prefit:
-    fit_dirs_name = list(zip(["shapes_prefit", "shapes_fit_s"], ["prefit", "postfit"]))
+    fit_dirs_name = list(zip(["shapes_prefit", sh__], ["prefit", "postfit"]))
 
 scales = ["log"]
 if do_lin:
@@ -117,6 +146,12 @@ for scale in scales:
 
             for year in years:
                 region_year = year_region_label(year, region)
+                try:
+                    _ = f[f"{directory}/{region_year}"].keys()
+                except:
+                    print(f"region {region_year} not present, skipping")
+                    continue 
+
                 for sample in samples:
                     for subsample in samples[sample]["samples_group"]:
                         try:
@@ -159,11 +194,17 @@ for scale in scales:
                     histos["data"] += data_val
                     histos["data_err"] += data_err
 
+            if not histos: continue 
+
             sm_signals = []
             for sample in samples:
                 if not samples[sample].get("is_signal", False):
                     continue
-                histos[sample] = histos[sample] / sm_factor
+                if not args.sm:
+                    histos[sample] = histos[sample] / sm_factor
+                else:
+                    histos[sample] = histos[sample]
+
                 sm_signals.append(histos[sample])
 
             histos["sig"] = histos["sig"] - np.sum(sm_signals, axis=0)
@@ -330,10 +371,10 @@ for scale in scales:
             ax[0].legend(
                 loc="upper center",
                 # loc=(0.016, 0.75),
-                frameon=True,
+                frameon=False,
                 ncols=3,
-                framealpha=0.8,
-                fontsize=8,
+                framealpha=0.0,
+                fontsize=10,
             )
 
             ax[1].errorbar(
@@ -366,17 +407,21 @@ for scale in scales:
             exp = np.exp(-np.square(ys[0, :] - vals) / (2 * data_err**2))[~_mask]
             chi2 = -2 * np.log(np.prod(exp))
 
-            if name == "postfit":
-                ax[1].set_ylim(0.90, 1.1)
-                ax[1].legend(
-                    [],
-                    title="$\\chi^2$ = {:.2f}".format(chi2),
-                    loc="upper center",
-                    frameon=True,
-                    ncols=3,
-                    framealpha=0.8,
-                    fontsize=8,
-                )
+            ax[1].set_ylim(1. - abs(1. - float(args.ratio_lim)), float(args.ratio_lim))
+
+            #if name == "postfit":
+                # ax[1].set_ylim(abs(float(args.ratio_lim)-1.0), float(args.ratio_lim))
+                # ax[1].set_ylim(abs(1.-args.ratio_lim), 1.2)
+                #ax[1].legend(
+                #    [],
+                #    title="$\\chi^2$ = {:.2f}".format(chi2),
+                #    loc="upper center",
+                #    frameon=True,
+                #    ncols=3,
+                #    framealpha=0.0,
+                #    fontsize=10,
+                #    frameon=False
+                #)
 
             if ratio_option == 1:
                 # ax 2, data - bkg - sm  to compare EFT
